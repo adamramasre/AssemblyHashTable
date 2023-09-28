@@ -1,0 +1,77 @@
+Microsoft (R) Macro Assembler Version 14.34.31937.0	    02/09/23 20:34:39
+template.asm						     Page 1 - 1
+
+
+				; Program template (Template.asm)
+
+				COMMENT&
+				This is template that can be used as a starting point for any new assembler programs
+				Multi - line comments are created using the COMMENT directive.The character after the directive
+				is repeated to identify when the comment ends.
+				&
+
+				; Either include the Irvine libary
+				;  INCLUDE Irvine32.inc
+
+				; or include the .386 and .model directives
+				.386
+				.model flat, stdcall
+
+				.stack 4096; declare your stack size
+
+				; Declare the function prototype for the ExitProcess function
+				ExitProcess PROTO dwExitCode : DWORD
+
+ 00000000			.data
+				; declare variables here
+
+ 00000000			.code
+ 00000000			main PROC
+				; write your code here
+
+ 00000000  90			    NOP
+				    INVOKE ExitProcess,1
+ 00000001  6A 01	   *	    push   +000000001h
+ 00000003  E8 00000000 E   *	    call   ExitProcess
+ 00000008			main ENDP
+				END main
+Microsoft (R) Macro Assembler Version 14.34.31937.0	    02/09/23 20:34:39
+template.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 DWord	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000000 DWord	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000008 DWord	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000008 Public STDCALL
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000003h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+
+	   0 Warnings
+	   0 Errors

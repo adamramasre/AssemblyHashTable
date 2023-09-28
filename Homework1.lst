@@ -1,0 +1,1503 @@
+Microsoft (R) Macro Assembler Version 14.35.32216.1	    05/20/23 00:16:53
+FinalProject.asm					     Page 1 - 1
+
+
+				; Table of Procedure Offsets          (ProcTble.asm)
+
+				; This progam contains a table with offsets of procedures.
+				; It uses the table to execute indirect procedure calls.
+
+				INCLUDE Irvine32.inc
+			      C ; Include file for Irvine32.lib             (Irvine32.inc)
+			      C 
+			      C ;OPTION CASEMAP:NONE		; optional: make identifiers case-sensitive
+			      C 
+			      C INCLUDE SmallWin.inc		; MS-Windows prototypes, structures, and constants
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C INCLUDE VirtualKeys.inc
+			      C ; VirtualKeys.inc
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C 
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+
+
+				;PROTO Statements
+
+
+
+				HTCreate PROTO,
+					hashSize:BYTE,
+					hashName: PTR BYTE
+
+				HTInsert PROTO,
+					htptr:DWORD,
+					htkey:PTR BYTE,
+					htvalue:PTR BYTE
+
+				HTRemove PROTO,
+					htptr:DWORD,
+					htkey:PTR BYTE
+
+				HTSearch PROTO,
+					htptr:DWORD,
+					htkey:PTR BYTE
+
+				HTPrint PROTO,
+					htptr:DWORD
+
+				HTDestroy PROTO,
+					htptr:DWORD,
+					hthheap:HANDLE
+
+ 00000000			.data
+
+ 00000000 00000000		hHeap   HANDLE ?		; main handle to the process heap
+
+ 00000004 00000000		hashPTR DWORD ? ; stores the address of the hashtable
+
+
+ 00000008 31 3A 20 48 54	msgcreate BYTE "1: HTCreate",0
+	   43 72 65 61 74
+	   65 00
+ 00000014 57 68 61 74 20	msgasksize BYTE "What size?: ",0
+	   73 69 7A 65 3F
+	   3A 20 00
+ 00000021 4B 65 79 20 6E	msgKeyNotFound BYTE "Key not found. ",0
+	   6F 74 20 66 6F
+	   75 6E 64 2E 20
+	   00
+ 00000031 4B 65 79 20 46	msgKeyFound BYTE "Key Found ",0
+	   6F 75 6E 64 20
+	   00
+ 0000003C 49 6E 73 65 72	msgInsertingKey BYTE "Inserting Key...",0
+	   74 69 6E 67 20
+	   4B 65 79 2E 2E
+	   2E 00
+ 0000004D 56 61 6C 75 65	msgValue BYTE "Value: ",0
+	   3A 20 00
+ 00000055 4E 6F 74 68 69	msgNothing BYTE "Nothing Found. ",0
+	   6E 67 20 46 6F
+	   75 6E 64 2E 20
+	   00
+ 00000065 20 3A 20 00		msgColon BYTE " : ",0 
+ 00000069 54 61 62 6C 65	msgTableName BYTE "Table Name: ",0
+	   20 4E 61 6D 65
+	   3A 20 00
+ 00000076 54 61 62 6C 65	msgTableSize BYTE "Table Size: ",0
+	   20 53 69 7A 65
+	   3A 20 00
+ 00000083 45 6C 65 6D 65	msgElementsInTable BYTE "Elements in Table: ",0
+	   6E 74 73 20 69
+	   6E 20 54 61 62
+	   6C 65 3A 20 00
+ 00000097 20 2D 2D 3E 20	msgArrow BYTE " --> ",0
+	   00
+ 0000009D 4B 65 79 20 65	msgKeyExists BYTE "Key exists. ",0
+	   78 69 73 74 73
+	   2E 20 00
+ 000000AA 4E 6F 74 20 46	msgNotFound BYTE "Not Found. ",0
+	   6F 75 6E 64 2E
+	   20 00
+ 000000B6 4B 65 79 20 55	msgKeyUpdated BYTE "Key Updated. ",0
+	   70 64 61 74 65
+	   64 2E 20 00
+ 000000C4 4B 65 79 3A 20	msgKey BYTE "Key: ",0
+	   00
+
+
+ 000000CA 00000000		avengersHashPTR DWORD ? ; stores the address of the avengers table
+ 000000CE 00000000		avengersHHeap HANDLE ? ; stores heap handle for avengers
+ 000000D2 05			avengersTableSize BYTE 5
+ 000000D3 41 76 65 6E 67	msgAvengers BYTE "Avengers",0 ; use for table
+	   65 72 73 00
+
+ 000000DC 00000000		badGuysHashPTR DWORD ? ; stores the address of the avengers table
+ 000000E0 00000000		badGuysHHeap HANDLE ? ; stores heap handle for avengers
+ 000000E4 06			badGuysTableSize BYTE 6
+ 000000E5 42 61 64 20 47	msgBadGuys BYTE "Bad Guys",0 ; use for table
+	   75 79 73 00
+
+ 000000EE 54 68 6F 72 00	msgThor BYTE "Thor",0
+ 000000F3 48 65 6D 73 77	msgHemsworth BYTE "Hemsworth",0
+	   6F 72 74 68 00
+
+ 000000FD 49 72 6F 6E 6D	msgIronman BYTE "Ironman",0
+	   61 6E 00
+ 00000105 44 6F 77 6E 65	msgDowney BYTE "Downey",0
+	   79 00
+
+ 0000010C 48 75 6C 6B 00	msgHulk BYTE "Hulk",0
+ 00000111 52 75 66 66 61	msgRuffalo BYTE "Ruffalo",0
+	   6C 6F 00
+
+ 00000119 4F 64 69 6E 00	msgOdin BYTE "Odin",0
+
+ 0000011E 4A 61 72 76 69	msgJarvis BYTE "Jarvis",0
+	   73 00
+ 00000125 42 65 74 74 61	msgBettany BYTE "Bettany",0
+	   6E 79 00
+
+ 0000012D 46 75 72 79 00	msgFury BYTE "Fury",0
+ 00000132 4A 61 63 6B 73	msgJackson BYTE "Jackson",0
+	   6F 6E 00
+
+ 0000013A 4C 6F 6B 69 00	msgLoki BYTE "Loki",0
+ 0000013F 48 69 64 64 6C	msgHiddleston BYTE "Hiddleston",0
+	   65 73 74 6F 6E
+	   00
+
+ 0000014A 55 6C 74 72 6F	msgUltron BYTE "Ultron",0
+	   6E 00
+ 00000151 53 70 61 64 65	msgSpader BYTE "Spader",0
+	   72 00
+
+
+ 00000000			.code
+
+
+
+ 00000000			main PROC
+
+ 00000000			restart:
+					;mov edx, OFFSET msgwelcome
+					;call WriteString
+					
+
+ 00000000			avengersAssemble:
+					
+
+					INVOKE HTCreate, avengersTableSize, addr msgAvengers ;create a hashtable for avengers with size of 5
+ 00000000  68 000000D3 R   *	    push   OFFSET msgAvengers
+ 00000005  A0 000000D2 R   *	    mov    al, avengersTableSize
+ 0000000A  50		   *	    push   eax
+ 0000000B  E8 000001F8	   *	    call   HTCreate
+					;edx has the pointer to hashtable after calling htcreate
+					;eax has the heap pointer after calling htcreate
+ 00000010  89 15 000000CA R		mov avengersHashPTR,edx
+ 00000016  A3 000000CE R		mov avengersHHeap, eax
+					INVOKE HTInsert, avengersHashPTR, addr msgThor, addr msgHemsworth
+ 0000001B  68 000000F3 R   *	    push   OFFSET msgHemsworth
+ 00000020  68 000000EE R   *	    push   OFFSET msgThor
+ 00000025  FF 35 000000CA R *	    push   avengersHashPTR
+ 0000002B  E8 0000021D	   *	    call   HTInsert
+					INVOKE HTInsert, avengersHashPTR, addr msgIronman, addr msgDowney
+ 00000030  68 00000105 R   *	    push   OFFSET msgDowney
+ 00000035  68 000000FD R   *	    push   OFFSET msgIronman
+ 0000003A  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000040  E8 00000208	   *	    call   HTInsert
+					INVOKE HTInsert, avengersHashPTR, addr msgHulk, addr msgRuffalo
+ 00000045  68 00000111 R   *	    push   OFFSET msgRuffalo
+ 0000004A  68 0000010C R   *	    push   OFFSET msgHulk
+ 0000004F  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000055  E8 000001F3	   *	    call   HTInsert
+					INVOKE HTPrint, avengersHashPTR
+ 0000005A  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000060  E8 0000049E	   *	    call   HTPrint
+					INVOKE HTSearch, avengersHashPTR, addr msgIronman
+ 00000065  68 000000FD R   *	    push   OFFSET msgIronman
+ 0000006A  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000070  E8 000003B0	   *	    call   HTSearch
+ 00000075  E8 00000000 E		call crlf
+ 0000007A  8B D7			mov edx,edi ; value address
+ 0000007C  E8 00000000 E		call WriteString ; print the value returned 
+ 00000081  E8 00000000 E		call crlf
+
+ 00000086  E8 00000000 E		call crlf
+
+					INVOKE HTSearch, avengersHashPTR, addr msgThor
+ 0000008B  68 000000EE R   *	    push   OFFSET msgThor
+ 00000090  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000096  E8 0000038A	   *	    call   HTSearch
+ 0000009B  E8 00000000 E		call crlf
+ 000000A0  8B 12			mov edx,[edx] ; dereference to get address of value
+ 000000A2  E8 00000000 E		call WriteString ; print the value returned 
+ 000000A7  E8 00000000 E		call crlf
+
+					INVOKE HTRemove, avengersHashPTR, addr msgThor
+ 000000AC  68 000000EE R   *	    push   OFFSET msgThor
+ 000000B1  FF 35 000000CA R *	    push   avengersHashPTR
+ 000000B7  E8 00000273	   *	    call   HTRemove
+					INVOKE HTPrint, avengersHashPTR
+ 000000BC  FF 35 000000CA R *	    push   avengersHashPTR
+ 000000C2  E8 0000043C	   *	    call   HTPrint
+					INVOKE HTRemove, avengersHashPTR, addr msgOdin
+ 000000C7  68 00000119 R   *	    push   OFFSET msgOdin
+ 000000CC  FF 35 000000CA R *	    push   avengersHashPTR
+ 000000D2  E8 00000258	   *	    call   HTRemove
+					INVOKE HTPrint, avengersHashPTR
+ 000000D7  FF 35 000000CA R *	    push   avengersHashPTR
+ 000000DD  E8 00000421	   *	    call   HTPrint
+					INVOKE HTSearch, avengersHashPTR, addr msgIronman
+ 000000E2  68 000000FD R   *	    push   OFFSET msgIronman
+ 000000E7  FF 35 000000CA R *	    push   avengersHashPTR
+ 000000ED  E8 00000333	   *	    call   HTSearch
+ 000000F2  E8 00000000 E		call crlf
+ 000000F7  8B D7			mov edx,edi ; value address
+ 000000F9  E8 00000000 E		call WriteString ; print the value returned 
+ 000000FE  E8 00000000 E		call crlf
+					INVOKE HTSearch, avengersHashPTR, addr msgThor
+ 00000103  68 000000EE R   *	    push   OFFSET msgThor
+ 00000108  FF 35 000000CA R *	    push   avengersHashPTR
+ 0000010E  E8 00000312	   *	    call   HTSearch
+ 00000113  E8 00000000 E		call crlf
+ 00000118  8B D7			mov edx,edi ; value address
+ 0000011A  E8 00000000 E		call WriteString ; print the value returned 
+ 0000011F  E8 00000000 E		call crlf
+					INVOKE HTInsert, avengersHashPTR, addr msgThor, addr msgHemsworth
+ 00000124  68 000000F3 R   *	    push   OFFSET msgHemsworth
+ 00000129  68 000000EE R   *	    push   OFFSET msgThor
+ 0000012E  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000134  E8 00000114	   *	    call   HTInsert
+					INVOKE HTInsert, avengersHashPTR, addr msgJarvis, addr msgBettany
+ 00000139  68 00000125 R   *	    push   OFFSET msgBettany
+ 0000013E  68 0000011E R   *	    push   OFFSET msgJarvis
+ 00000143  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000149  E8 000000FF	   *	    call   HTInsert
+					INVOKE HTInsert, avengersHashPTR, addr msgFury, addr msgJackson
+ 0000014E  68 00000132 R   *	    push   OFFSET msgJackson
+ 00000153  68 0000012D R   *	    push   OFFSET msgFury
+ 00000158  FF 35 000000CA R *	    push   avengersHashPTR
+ 0000015E  E8 000000EA	   *	    call   HTInsert
+					INVOKE HTPrint, avengersHashPTR
+ 00000163  FF 35 000000CA R *	    push   avengersHashPTR
+ 00000169  E8 00000395	   *	    call   HTPrint
+
+					INVOKE HTCreate, badGuysTableSize, addr msgBadGuys ;create a hashtable for avengers with size of 5
+ 0000016E  68 000000E5 R   *	    push   OFFSET msgBadGuys
+ 00000173  A0 000000E4 R   *	    mov    al, badGuysTableSize
+ 00000178  50		   *	    push   eax
+ 00000179  E8 0000008A	   *	    call   HTCreate
+					;edx has the pointer to hashtable after calling htcreate
+					;eax has the heap pointer after calling htcreate
+ 0000017E  89 15 000000DC R		mov badGuysHashPTR,edx
+ 00000184  A3 000000E0 R		mov badGuysHHeap, eax
+					INVOKE HTInsert, badGuysHashPTR, addr msgLoki, addr msgHiddleston
+ 00000189  68 0000013F R   *	    push   OFFSET msgHiddleston
+ 0000018E  68 0000013A R   *	    push   OFFSET msgLoki
+ 00000193  FF 35 000000DC R *	    push   badGuysHashPTR
+ 00000199  E8 000000AF	   *	    call   HTInsert
+					INVOKE HTInsert, badGuysHashPTR, addr msgUltron, addr msgSpader
+ 0000019E  68 00000151 R   *	    push   OFFSET msgSpader
+ 000001A3  68 0000014A R   *	    push   OFFSET msgUltron
+ 000001A8  FF 35 000000DC R *	    push   badGuysHashPTR
+ 000001AE  E8 0000009A	   *	    call   HTInsert
+					INVOKE HTPrint, badGuysHashPTR
+ 000001B3  FF 35 000000DC R *	    push   badGuysHashPTR
+ 000001B9  E8 00000345	   *	    call   HTPrint
+					INVOKE HTPrint, avengersHashPTR
+ 000001BE  FF 35 000000CA R *	    push   avengersHashPTR
+ 000001C4  E8 0000033A	   *	    call   HTPrint
+					
+					INVOKE HTDestroy, avengersHashPTR, avengersHHeap ; does nothing, not implemented
+ 000001C9  FF 35 000000CE R *	    push   avengersHHeap
+ 000001CF  FF 35 000000CA R *	    push   avengersHashPTR
+ 000001D5  E8 00000401	   *	    call   HTDestroy
+					INVOKE HTPrint, avengersHashPTR
+ 000001DA  FF 35 000000CA R *	    push   avengersHashPTR
+ 000001E0  E8 0000031E	   *	    call   HTPrint
+
+					INVOKE HTDestroy, badGuysHashPTR, badGuysHHeap ; does nothing, not implemented
+ 000001E5  FF 35 000000E0 R *	    push   badGuysHHeap
+ 000001EB  FF 35 000000DC R *	    push   badGuysHashPTR
+ 000001F1  E8 000003E5	   *	    call   HTDestroy
+					INVOKE HTPrint, badGuysHashPTR
+ 000001F6  FF 35 000000DC R *	    push   badGuysHashPTR
+ 000001FC  E8 00000302	   *	    call   HTPrint
+
+					exit
+ 00000201  6A 00	   *	    push   +000000000h
+ 00000203  E8 00000000 E   *	    call   ExitProcess
+ 00000208			main ENDP
+
+				;-------------------------------
+ 00000208			HTCreate PROC uses ebx ecx esi,
+					hashSize:BYTE, hashName:PTR BYTE
+				; Creates an empty hash table
+				; Receives: the hash size (to make a table of size(hashsize)) , byte pointer to string name for hash table
+				;Returns: pointer to the hash table in edx
+				;edx has the pointer to hashtable after executing
+				;eax has the heap pointer after executing
+
+ 00000208  55		   *	    push   ebp
+ 00000209  8B EC	   *	    mov    ebp, esp
+ 0000020B  53		   *	    push   ebx
+ 0000020C  51		   *	    push   ecx
+ 0000020D  56		   *	    push   esi
+					INVOKE GetProcessHeap ; get handle to heap
+ 0000020E  E8 00000000 E   *	    call   GetProcessHeap
+ 00000213  A3 00000000 R		mov hHeap, eax ; hHeap stores the handle
+ 00000218  50				push eax ; save handle for later
+
+ 00000219  0F B6 45 08			movzx eax, hashSize
+ 0000021D  83 C0 03			add eax,3
+					;^ reserve 3 slots at the front for 1. the hash table name 2. the hash table size 3. the number of elemetns in the hash table 
+ 00000220  BA 00000004			mov edx, SIZEOF DWORD
+ 00000225  F7 E2			mul edx
+					; eax now has the correct memory space for hash table
+
+					INVOKE HeapAlloc, hHeap, HEAP_ZERO_MEMORY, eax ; allocate space for hash table
+ 00000227  50		   *	    push   eax
+ 00000228  6A 08	   *	    push   +000000008h
+ 0000022A  FF 35 00000000 R *	    push   hHeap
+ 00000230  E8 00000000 E   *	    call   HeapAlloc
+					; eax has the pointer to the table
+
+ 00000235  8B D0			mov edx,eax ; put pointer to table in edx for return
+ 00000237  8B 7D 0C			mov edi,hashName
+ 0000023A  89 38			mov [eax],edi ; address to name of hashtable in first slot now
+ 0000023C  83 C0 04			add eax,4
+ 0000023F  0F B6 5D 08			movzx ebx, hashSize
+ 00000243  89 18			mov [eax],ebx ; hashsize stored in second slot
+					; third slot is already 0 by default, which contains number of elements in the table
+ 00000245  58				pop eax
+
+					;when we return, eax will hold the heap handle, and edx will hold pointer to the table
+					ret
+ 00000246  5E		   *	    pop    esi
+ 00000247  59		   *	    pop    ecx
+ 00000248  5B		   *	    pop    ebx
+ 00000249  C9		   *	    leave  
+ 0000024A  C2 0008	   *	    ret    00008h
+ 0000024D			HTCreate ENDP
+
+				;------------------------------------
+ 0000024D			HTInsert PROC uses ebx ecx esi edx,
+					htptr:DWORD, htkey:PTR BYTE, htvalue:PTR BYTE
+				; inserts a key- value pair into the hash table
+				; if insert will cause 75% load factor to be exceeded, double the hash size and recompute all hash keys <-- NOT IMPLEMENTED
+ 0000024D  55		   *	    push   ebp
+ 0000024E  8B EC	   *	    mov    ebp, esp
+ 00000250  53		   *	    push   ebx
+ 00000251  51		   *	    push   ecx
+ 00000252  56		   *	    push   esi
+ 00000253  52		   *	    push   edx
+ 00000254  E8 00000000 E		call crlf
+					;check if key exists
+					INVOKE HTSearch, htptr, htkey
+ 00000259  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 0000025C  FF 75 08	   *	    push   dword  ptr ss:[ebp]+000000008h
+ 0000025F  E8 000001C1	   *	    call   HTSearch
+
+ 00000264  83 F8 01			cmp eax, 1
+ 00000267  75 23			jne noExist
+
+					; if the key does exist, we can update the value here
+ 00000269  8B 4D 10			mov ecx, htvalue
+ 0000026C  89 0A			mov [edx],ecx ; after HTSearch, edx will contain a pointer to the address of the value. Dereference it to change value
+ 0000026E  BA 0000009D R		mov edx, OFFSET msgKeyExists
+ 00000273  E8 00000000 E		call WriteString
+
+					
+ 00000278  BA 000000B6 R		mov edx, OFFSET msgKeyUpdated
+ 0000027D  E8 00000000 E		call WriteString
+ 00000282  E8 00000000 E		call crlf
+ 00000287  E9 0000009B			jmp endInsert
+					
+
+					;safe to add key after this point
+ 0000028C			noExist:
+					
+ 0000028C  BA 0000003C R		mov edx, offset msgInsertingKey ;
+ 00000291  E8 00000000 E		call WriteString
+ 00000296  E8 00000000 E		call crlf
+ 0000029B  8B 75 08			mov esi, htptr ; move the pointer of hash table into esi
+ 0000029E  83 C6 08			add esi,8 ; go to number of elements
+ 000002A1  B9 00000001			mov ecx,00000001
+ 000002A6  01 0E			add [esi],ecx ; increment number of elements in the table 
+					
+ 000002A8  8B 75 08			mov esi, htptr ; reset to front of table
+
+					; move address of string key into esi
+ 000002AB  8B 55 0C			mov edx, htkey ; move address of the key into edx
+					
+ 000002AE  E8 00000000 E	    call StrLength
+
+				     ; length of the string in eax
+ 000002B3  8B C8			mov ecx, eax
+ 000002B5  B8 00000000			mov eax,00000000
+ 000002BA  BB 00000000			mov ebx,00000000
+					
+ 000002BF			L1: 
+ 000002BF  8A 02			mov al, [edx] ; move a character into al
+ 000002C1  03 D8			add ebx, eax ; add the character ascii value to a counter
+ 000002C3  42				inc edx ; next character
+ 000002C4  E2 F9			loop L1
+
+					; ebx now has full ascii value
+
+ 000002C6  83 C6 04			add esi,4 ; increment to hash table size
+ 000002C9  8B 3E			mov edi, [esi]
+ 000002CB  8B C3			mov eax,ebx ; full ascii value is the divisor
+ 000002CD  BA 00000000			mov edx, 00000000 ; clear edx to make room for remainder
+ 000002D2  F7 F7			div edi ; htptr+4 is the table size
+					; remainder stored in edx
+ 000002D4  83 C6 08			add esi,8 ; go to first element in array
+
+ 000002D7  8B C2			mov eax,edx
+					;eax contains how many slots to increment
+ 000002D9  53				push ebx
+ 000002DA  BB 00000004			mov ebx, 00000004
+ 000002DF  F7 E3			mul ebx ; multiply by dword
+ 000002E1  5B				pop ebx
+ 000002E2  03 F0			add esi,eax ; go to the spot in the table we should be at
+
+					;esi contains the address where we should put the newly allocated heap
+
+					; code to update value if key is present
+
+					
+
+
+ 000002E4			proceed:
+
+					INVOKE GetProcessHeap
+ 000002E4  E8 00000000 E   *	    call   GetProcessHeap
+ 000002E9  8B D8			mov ebx, eax ; ebx has the heap pointer
+
+					; we want to allocate 4 spaces for each node
+ 000002EB  B8 00000000			mov eax, 00000000
+ 000002F0  83 C0 10			add eax, 16 ; 4 * SIZEOF DWORD = 16
+					
+									;proc heap  in ebx        space of a node in eax
+					INVOKE HeapAlloc, ebx, HEAP_ZERO_MEMORY, eax ; allocate space for a node
+ 000002F3  50		   *	    push   eax
+ 000002F4  6A 08	   *	    push   +000000008h
+ 000002F6  53		   *	    push   ebx
+ 000002F7  E8 00000000 E   *	    call   HeapAlloc
+
+					; esi has a pointer to the slot we need to search through
+					; ebx has heap handle
+					; eax has pointer to the array we recently allocated
+					
+ 000002FC  56				push esi ; store slot for later
+ 000002FD  8B D0			mov edx, eax ; store address of newly created node in edx for later
+ 000002FF  8B 4D 0C			mov ecx, htkey
+ 00000302  89 08			mov [eax],ecx; key goes in first slot
+ 00000304  83 C0 04			add eax,4
+ 00000307  8B 4D 10			mov ecx, htvalue
+ 0000030A  89 08			mov [eax],ecx ; value goes in second slot
+					
+ 0000030C  83 C0 08			add eax,8 ; skip to heap handle slot
+ 0000030F  89 18			mov [eax],ebx ; put heap handle in last slot of node
+
+ 00000311  8B C2			mov eax,edx ; restore original address of array to eax
+
+					
+					
+ 00000313  8B 1E			mov ebx,[esi] ; ebx contains the address of the node
+ 00000315  83 FB 00			cmp ebx,0 ; if its 0, the slot is free
+ 00000318  75 04			jne notFree
+					; past this point, the slot is free
+ 0000031A  89 06			mov [esi], eax
+ 0000031C  EB 09		    jmp endInsert
+
+
+ 0000031E			notFree:
+
+					; eax stores the address of the succesfully allocated array
+					; esi stores the address of the correctly hashed slot in the array
+					; 
+ 0000031E  8B F8			mov edi, eax
+ 00000320  83 C7 08			add edi,8 ; go to 3rd bucket, which is next link
+ 00000323  89 1F			mov [edi], ebx ; store the address of next node in edi
+ 00000325  89 06			mov [esi],eax
+					 
+					; NODE STRUCTURE 
+					; | KEY | VALUE | PTRNEXTNODE | HEAPHANDLE |
+
+
+ 00000327			endInsert:
+					
+					ret
+ 00000327  5A		   *	    pop    edx
+ 00000328  5E		   *	    pop    esi
+ 00000329  59		   *	    pop    ecx
+ 0000032A  5B		   *	    pop    ebx
+ 0000032B  C9		   *	    leave  
+ 0000032C  C2 000C	   *	    ret    0000Ch
+
+					
+ 0000032F			HTInsert ENDP
+
+				;------------------------------------
+ 0000032F			HTRemove PROC uses ebx ecx esi edx,
+					htptr:DWORD, htkey:PTR BYTE
+				; removes a key-value pair from the hash table
+				; inputs - a pointer to the hash table, a key
+				; returns nothing
+
+ 0000032F  55		   *	    push   ebp
+ 00000330  8B EC	   *	    mov    ebp, esp
+ 00000332  53		   *	    push   ebx
+ 00000333  51		   *	    push   ecx
+ 00000334  56		   *	    push   esi
+ 00000335  52		   *	    push   edx
+					INVOKE HTSearch, htptr, htkey
+ 00000336  FF 75 0C	   *	    push   dword  ptr ss:[ebp]+00000000Ch
+ 00000339  FF 75 08	   *	    push   dword  ptr ss:[ebp]+000000008h
+ 0000033C  E8 000000E4	   *	    call   HTSearch
+
+ 00000341  83 F8 00			cmp eax,0 ; if key no exist, we stop
+
+ 00000344  0F 84 000000D3		je done
+
+					; used from HTInsert
+ 0000034A  8B 75 08			mov esi, htptr ; move the pointer of hash table into esi
+					
+					; move address of string key into esi
+ 0000034D  8B 55 0C			mov edx, htkey ; move address of the key into edx
+					
+
+
+ 00000350  E8 00000000 E	    call StrLength
+
+				    ; length of the string in eax
+ 00000355  8B C8			mov ecx, eax
+ 00000357  B8 00000000			mov eax,00000000
+ 0000035C  BB 00000000			mov ebx,00000000
+					
+ 00000361			L1: 
+ 00000361  8A 02			mov al, [edx] ; move a character into al
+ 00000363  03 D8			add ebx, eax ; add the character ascii value to a counter
+ 00000365  42				inc edx ; next character
+ 00000366  E2 F9			loop L1
+
+					; ebx now has full ascii value
+
+ 00000368  83 C6 04			add esi,4 ; increment to hash table size
+ 0000036B  8B 3E			mov edi, [esi]
+ 0000036D  8B C3			mov eax,ebx ; full ascii value is the divisor
+ 0000036F  BA 00000000			mov edx, 00000000 ; clear edx to make room for remainder
+ 00000374  F7 F7			div edi ; htptr+4 is the table size
+					; remainder stored in edx
+ 00000376  83 C6 08			add esi,8 ; go to first element in array
+
+ 00000379  8B C2			mov eax,edx
+					;eax contains how many slots to increment
+ 0000037B  53				push ebx
+ 0000037C  BB 00000004			mov ebx, 00000004
+ 00000381  F7 E3			mul ebx ; multiply by dword
+ 00000383  5B				pop ebx
+ 00000384  03 F0			add esi,eax ; go to the spot in the table we should be at
+					;end of segment used from insert
+					
+					
+ 00000386  8B 45 0C			mov eax, htkey 
+					
+					; esi contains the slot in the hash table that we should look for the key
+					; eax contains the key address
+
+ 00000389  8B 1E			mov ebx,[esi] ; ebx stores address of first node
+
+ 0000038B  83 FB 00			cmp ebx,0 ; if ebx = 0, nothing to remove
+ 0000038E  74 7E			je notFound
+
+
+					INVOKE Str_compare, [ebx], eax ; test value of first node against key
+ 00000390  50		   *	    push   eax
+ 00000391  FF 33	   *	    push   dword  ptr [ebx]
+ 00000393  E8 00000000 E   *	    call   Str_compare
+
+ 00000398  75 28			jne noDeleteAtHead
+
+ 0000039A			deleteAtHead:	; past this point, we found the node to be deleted
+					
+					; need to store address of next in node to be deleted where its address is
+
+					; esi points to the correct slot in the table
+					; deferencing esi points to the node
+					
+ 0000039A  8B 3E			mov edi, [esi] 
+ 0000039C  8B DE			mov ebx, esi ; ebx will be used to store the pointer to the memory block
+
+ 0000039E  83 C7 08			add edi, 8 ; increment 2 dwords in order to get pointer next node (even if its 0)
+ 000003A1  8B 07			mov eax,[edi]
+					
+ 000003A3  89 06			mov [esi],eax ; node is now lost-- the slot in the table now points to the lost node's nxt
+ 000003A5  83 C7 04			add edi,4 ;edi is now the heap handle
+
+					INVOKE HeapFree, [edi], 0, [ebx] 
+ 000003A8  FF 33	   *	    push   dword  ptr [ebx]
+ 000003AA  6A 00	   *	    push   +000000000h
+ 000003AC  FF 37	   *	    push   dword  ptr [edi]
+ 000003AE  E8 00000000 E   *	    call   HeapFree
+ 000003B3  8B 75 08			mov esi, htptr ; move the pointer of hash table into esi
+ 000003B6  83 C6 08			add esi,8
+ 000003B9  B9 00000001			mov ecx,00000001
+ 000003BE  29 0E			sub [esi],ecx ; decrement number of elements in the table 
+ 000003C0  EB 5B			jmp done
+
+					
+ 000003C2			noDeleteAtHead:
+ 000003C2			repeatSearch:
+					;ebx stores address of first node
+					; edx will store prev node
+ 000003C2  8B D3			mov edx, ebx ; edx has first address in node
+ 000003C4  83 C3 08			add ebx, 8
+ 000003C7  8B 1B			mov ebx, [ebx] ; go to next node, if it exists
+ 000003C9  8B C3			mov eax, ebx ; eax will store the current node
+
+ 000003CB  83 FB 00			cmp ebx, 0 ; check if the next node is blank
+ 000003CE  74 3E			je notFound ; if its blank, we go to next node
+
+					; if not blank, we need to check this node
+ 000003D0  50				push eax
+ 000003D1  8B 3B			mov edi, [ebx] ; store address of key in edi
+ 000003D3  8B 45 0C			mov eax, htkey ; address of key we looking to remove in eax
+					INVOKE Str_compare, edi,eax
+ 000003D6  50		   *	    push   eax
+ 000003D7  57		   *	    push   edi
+ 000003D8  E8 00000000 E   *	    call   Str_compare
+ 000003DD  58				pop eax
+
+ 000003DE  75 2A			jne notEqual
+
+ 000003E0  8B F8			mov edi, eax ; store the address of current node to remove in edi
+ 000003E2  83 C2 08			add edx,8 ; edx points to previous node's next
+ 000003E5  83 C0 08			add eax,8 ; eax points to current node's next
+					 ;eax stores address of node we want to patch out
+ 000003E8  8B 30			mov esi, [eax] ; get next of current node, store in esi
+ 000003EA  89 32			mov [edx],esi ; store next of current node in previous node's next 
+					; remove node at address edi
+
+ 000003EC  8B F7			mov esi, edi
+ 000003EE  83 C6 0C			add esi,12 ; increment esi to the heap handle
+					INVOKE HeapFree, [esi], 0, edi 
+ 000003F1  57		   *	    push   edi
+ 000003F2  6A 00	   *	    push   +000000000h
+ 000003F4  FF 36	   *	    push   dword  ptr [esi]
+ 000003F6  E8 00000000 E   *	    call   HeapFree
+ 000003FB  8B 75 08			mov esi, htptr ; move the pointer of hash table into esi
+ 000003FE  83 C6 08			add esi,8
+ 00000401  B9 00000001			mov ecx,00000001
+ 00000406  29 0E			sub [esi],ecx ; decrement number of elements in the table 
+
+
+ 00000408  EB 13			jmp done
+
+ 0000040A			notEqual:
+ 0000040A  8B D8			mov ebx, eax
+ 0000040C  EB B4			jmp repeatSearch
+
+ 0000040E			notFound:
+					
+ 0000040E  BA 000000AA R		mov edx, offset msgNotFound
+ 00000413  E8 00000000 E		call WriteString
+ 00000418  E8 00000000 E		call crlf
+
+ 0000041D			done:
+					ret
+ 0000041D  5A		   *	    pop    edx
+ 0000041E  5E		   *	    pop    esi
+ 0000041F  59		   *	    pop    ecx
+ 00000420  5B		   *	    pop    ebx
+ 00000421  C9		   *	    leave  
+ 00000422  C2 0008	   *	    ret    00008h
+ 00000425			HTRemove ENDP
+					
+
+				;------------------------------------
+ 00000425			HTSearch PROC uses ebx ecx esi ,
+					htptr:DWORD, htkey:PTR BYTE
+				; find a key in the hash table and return the value
+				; returns the value of the key if found
+				; eax contains a 1 if found, or a 0 if not found
+				; edx contains the address of the value, will be blank if address not found
+				; edi contains the value, blank if address not found
+					
+ 00000425  55		   *	    push   ebp
+ 00000426  8B EC	   *	    mov    ebp, esp
+ 00000428  53		   *	    push   ebx
+ 00000429  51		   *	    push   ecx
+ 0000042A  56		   *	    push   esi
+ 0000042B  E8 00000000 E		call crlf
+					; used from HTInsert
+ 00000430  8B 75 08			mov esi, htptr ; move the pointer of hash table into esi
+					
+					; move address of string key into esi
+ 00000433  8B 55 0C			mov edx, htkey ; move address of the key into edx
+					
+ 00000436  E8 00000000 E	    call StrLength
+
+				    ; length of the string in eax
+ 0000043B  8B C8			mov ecx, eax
+ 0000043D  B8 00000000			mov eax,00000000
+ 00000442  BB 00000000			mov ebx,00000000
+					
+ 00000447			L1: 
+ 00000447  8A 02			mov al, [edx] ; move a character into al
+ 00000449  03 D8			add ebx, eax ; add the character ascii value to a counter
+ 0000044B  42				inc edx ; next character
+ 0000044C  E2 F9			loop L1
+
+					; ebx now has full ascii value
+
+ 0000044E  83 C6 04			add esi,4 ; increment to hash table size
+ 00000451  8B 3E			mov edi, [esi]
+ 00000453  8B C3			mov eax,ebx ; full ascii value is the divisor
+ 00000455  BA 00000000			mov edx, 00000000 ; clear edx to make room for remainder
+ 0000045A  F7 F7			div edi ; htptr+4 is the table size
+					; remainder stored in edx
+ 0000045C  83 C6 08			add esi,8 ; go to first element in array
+
+ 0000045F  8B C2			mov eax,edx
+					;eax contains how many slots to increment
+ 00000461  53				push ebx
+ 00000462  BB 00000004			mov ebx, 00000004
+ 00000467  F7 E3			mul ebx ; multiply by dword
+ 00000469  5B				pop ebx
+ 0000046A  03 F0			add esi,eax ; go to the spot in the table we should be at
+					;end of segment used from insert
+					;esi contains the address that we should look for the key
+
+ 0000046C  8B 1E			mov ebx, [esi]
+				; check the address of the first node attached to the table 
+ 0000046E  83 FB 00			cmp ebx,0 ; if the address is 0, there's nothing there --> say we no find anything
+ 00000471  74 2A			je notFound
+
+ 00000473			repeatSearch:
+ 00000473  8B 13			mov edx, [ebx] ; address of node key
+ 00000475  8B FB			mov edi, ebx ; store in case need return
+ 00000477  8B 45 0C			mov eax, htkey ; address of param key
+					INVOKE Str_compare, edx, eax ; compare key we're looking at and our target key
+ 0000047A  50		   *	    push   eax
+ 0000047B  52		   *	    push   edx
+ 0000047C  E8 00000000 E   *	    call   Str_compare
+ 00000481  75 0C			jne continueSearch 
+
+					; past this point we found the value we want to return
+ 00000483  83 C3 04		    add ebx, 4 ; get address of value in second slot of node
+ 00000486  8B 13		    mov edx, [ebx];
+ 00000488  B8 00000001			mov eax, 00000001
+ 0000048D  EB 29			jmp endSearch
+
+ 0000048F			continueSearch:
+ 0000048F  83 C3 08			add ebx, 8
+ 00000492  8B D3			mov edx, ebx
+ 00000494  8B 1A			mov ebx, [edx] ; put address of next node in ebx
+ 00000496  83 FB 00		    cmp ebx, 0 ; if the next node is blank, there is nothing left to search
+ 00000499  74 02		    je notFound 
+				        
+				    ; ebx has the address of the next node
+ 0000049B  EB D6		    jmp repeatSearch ; keep searching
+ 0000049D			notFound:
+ 0000049D  B8 00000000			mov eax,00000000 
+ 000004A2  BA 00000021 R		mov edx, offset msgKeyNotFound
+ 000004A7  E8 00000000 E		call WriteString
+					
+ 000004AC  BF 00000021 R		mov edi, OFFSET msgKeyNotFound
+					
+					ret
+ 000004B1  5E		   *	    pop    esi
+ 000004B2  59		   *	    pop    ecx
+ 000004B3  5B		   *	    pop    ebx
+ 000004B4  C9		   *	    leave  
+ 000004B5  C2 0008	   *	    ret    00008h
+ 000004B8			endSearch:
+ 000004B8  52				push edx
+ 000004B9  BA 00000031 R		mov edx, offset msgKeyFound
+ 000004BE  E8 00000000 E		call WriteString
+ 000004C3  E8 00000000 E		call crlf
+ 000004C8  BA 000000C4 R		mov edx, offset msgKey ; preparation message
+ 000004CD  E8 00000000 E		call WriteString
+
+ 000004D2  8B 55 0C			mov edx, htkey ; print key 
+ 000004D5  E8 00000000 E		call WriteString 
+ 000004DA  E8 00000000 E		call crlf
+ 000004DF  BA 0000004D R		mov edx, offset msgValue ;print value
+ 000004E4  E8 00000000 E		call WriteString
+ 000004E9  5A				pop edx
+ 000004EA  E8 00000000 E		call WriteString
+ 000004EF  E8 00000000 E		call crlf
+					
+ 000004F4  5B				pop ebx
+ 000004F5  83 C7 04			add edi, 4
+ 000004F8  8B D7			mov edx, edi
+
+					; address of value will be in edx upon return
+					; value will be in edi
+
+ 000004FA  8B 3A			mov edi, [edx]
+
+					ret
+ 000004FC  5E		   *	    pop    esi
+ 000004FD  59		   *	    pop    ecx
+ 000004FE  5B		   *	    pop    ebx
+ 000004FF  C9		   *	    leave  
+ 00000500  C2 0008	   *	    ret    00008h
+ 00000503			HTSearch ENDP
+
+
+					
+
+				;------------------------------------
+ 00000503			HTPrint PROC uses ebx ecx esi edx,
+					htptr:DWORD
+				; inputs - a pointer to the hash table
+				; returns - nothing
+ 00000503  55		   *	    push   ebp
+ 00000504  8B EC	   *	    mov    ebp, esp
+ 00000506  53		   *	    push   ebx
+ 00000507  51		   *	    push   ecx
+ 00000508  56		   *	    push   esi
+ 00000509  52		   *	    push   edx
+ 0000050A  E8 00000000 E		call crlf
+ 0000050F  8B 75 08			mov esi, htptr ; esi holds pointer to table
+
+
+ 00000512  BA 00000069 R		mov edx, offset msgTableName ; preparation message
+ 00000517  E8 00000000 E		call WriteString
+ 0000051C  8B 16			mov edx, [esi]; table name is the first slot
+ 0000051E  E8 00000000 E		call WriteString ; print the name of the table
+ 00000523  E8 00000000 E		call crlf
+					
+					
+
+ 00000528  83 C6 04			add esi,4
+ 0000052B  BA 00000076 R		mov edx, offset msgTableSize ; preparation message
+ 00000530  E8 00000000 E		call WriteString
+ 00000535  8B 0E			mov ecx,[esi] ; move number of elements into ecx to loop through
+ 00000537  8B 06			mov eax,[esi] ; second index is the table size
+ 00000539  E8 00000000 E		call WriteInt ; print table size
+					
+					
+ 0000053E  E8 00000000 E		call crlf
+
+ 00000543  83 C6 04			add esi,4 ; esi now at third index is the number of elements in the table;
+ 00000546  BA 00000083 R		mov edx, offset msgElementsInTable ; preparation message
+ 0000054B  E8 00000000 E		call WriteString
+ 00000550  8B 06			mov eax,[esi] 
+ 00000552  E8 00000000 E		call WriteInt ; print the number of elements in the hash table
+ 00000557  E8 00000000 E		call crlf
+ 0000055C  83 C6 04			add esi,4
+					; now esi is at the first element
+
+ 0000055F  B8 00000000			mov eax, 0 ; use EAX to store the hash index
+
+
+ 00000564			incTime:
+ 00000564  8B 1E			mov ebx,[esi] ; get value at slot, store in ebx
+
+ 00000566  83 FB 00			cmp ebx,0 ; check if slot is empty
+
+ 00000569  75 1B			jne notEmpty 
+
+ 0000056B  E8 00000000 E		call WriteInt ; print current index 
+ 00000570  BA 00000097 R		mov edx, offset msgArrow
+ 00000575  E8 00000000 E		call WriteString
+ 0000057A  BA 00000055 R		mov edx, OFFSET msgNothing
+ 0000057F  E8 00000000 E		call WriteString
+ 00000584  EB 42			jmp endOfLoop
+ 00000586			NotEmpty:
+ 00000586  E8 00000000 E		call WriteInt ; print the index that we're at
+ 0000058B  BA 00000097 R		mov edx, offset msgArrow
+ 00000590  E8 00000000 E		call WriteString
+
+ 00000595			printingLink:	
+					;past this point we need to print contents of a node
+
+ 00000595  8B 13			mov edx,[ebx] ; move key address into edx
+ 00000597  E8 00000000 E		call WriteString ; this prints the key
+ 0000059C  BA 00000065 R		mov edx, offset msgColon
+ 000005A1  E8 00000000 E		call WriteString
+					
+ 000005A6  83 C3 04			add ebx,4 ; inc to the value
+ 000005A9  8B 13			mov edx,[ebx]
+ 000005AB  E8 00000000 E		call WriteString ; this prints the value
+
+					
+					
+
+					
+ 000005B0  83 C3 04			add ebx,4
+ 000005B3  8B D3			mov edx,ebx ; move nxt address into eax. no need to dereference since we simply want the address stored there
+ 000005B5  8B 1A			mov ebx,[edx] ; now ebx holds the first address of the next link
+
+ 000005B7  83 FB 00			cmp ebx,0 ; if the next link is 0
+ 000005BA  74 0C			je endOfLoop ;  we can stop going through the linked list
+
+					;otherwise,
+ 000005BC  BA 00000097 R		mov edx, offset msgArrow
+ 000005C1  E8 00000000 E		call WriteString
+ 000005C6  EB CD			jmp printingLink
+
+					
+
+ 000005C8			endOfLoop:
+ 000005C8  83 C6 04			add esi,4 ; increment hash index
+ 000005CB  40				inc eax ; inc the hash index to display
+ 000005CC  E8 00000000 E		call crlf
+ 000005D1  E2 91			loop incTime
+
+
+					
+
+
+					ret
+ 000005D3  5A		   *	    pop    edx
+ 000005D4  5E		   *	    pop    esi
+ 000005D5  59		   *	    pop    ecx
+ 000005D6  5B		   *	    pop    ebx
+ 000005D7  C9		   *	    leave  
+ 000005D8  C2 0004	   *	    ret    00004h
+ 000005DB			HTPrint ENDP
+
+
+					
+
+				;------------------------------------
+ 000005DB			HTDestroy PROC uses ebx ecx esi edx, ; NOT IMPLEMENTED
+					htptr:DWORD, hthheap:HANDLE
+				; destroy the hash table, freeing up any heaps allocated
+				; inputs - a pointer to the hash table
+				; returns - nothing
+					
+ 000005DB  55		   *	    push   ebp
+ 000005DC  8B EC	   *	    mov    ebp, esp
+ 000005DE  53		   *	    push   ebx
+ 000005DF  51		   *	    push   ecx
+ 000005E0  56		   *	    push   esi
+ 000005E1  52		   *	    push   edx
+				    ret
+ 000005E2  5A		   *	    pop    edx
+ 000005E3  5E		   *	    pop    esi
+ 000005E4  59		   *	    pop    ecx
+ 000005E5  5B		   *	    pop    ebx
+ 000005E6  C9		   *	    leave  
+ 000005E7  C2 0008	   *	    ret    00008h
+ 000005EA			HTDestroy ENDP
+FinalProject.asm(722) : warning A6004:procedure argument or local not referenced : htptr
+FinalProject.asm(722) : warning A6004:procedure argument or local not referenced : hthheap
+
+				END main
+Microsoft (R) Macro Assembler Version 14.35.32216.1	    05/20/23 00:16:53
+FinalProject.asm					     Symbols 2 - 1
+
+
+
+
+Structures and Unions:
+
+                N a m e                  Size
+                                         Offset      Type
+
+CONSOLE_CURSOR_INFO  . . . . . .	 00000008
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  bVisible . . . . . . . . . . .	 00000004	 DWord
+CONSOLE_SCREEN_BUFFER_INFO . . .	 00000016
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCursorPosition . . . . . . .	 00000004	 DWord
+  wAttributes  . . . . . . . . .	 00000008	 Word
+  srWindow . . . . . . . . . . .	 0000000A	 QWord
+  dwMaximumWindowSize  . . . . .	 00000012	 DWord
+COORD  . . . . . . . . . . . . .	 00000004
+  X  . . . . . . . . . . . . . .	 00000000	 Word
+  Y  . . . . . . . . . . . . . .	 00000002	 Word
+FILETIME . . . . . . . . . . . .	 00000008
+  loDateTime . . . . . . . . . .	 00000000	 DWord
+  hiDateTime . . . . . . . . . .	 00000004	 DWord
+FOCUS_EVENT_RECORD . . . . . . .	 00000004
+  bSetFocus  . . . . . . . . . .	 00000000	 DWord
+FPU_ENVIRON  . . . . . . . . . .	 0000001C
+  controlWord  . . . . . . . . .	 00000000	 Word
+  statusWord . . . . . . . . . .	 00000004	 Word
+  tagWord  . . . . . . . . . . .	 00000008	 Word
+  instrPointerOffset . . . . . .	 0000000C	 DWord
+  instrPointerSelector . . . . .	 00000010	 DWord
+  operandPointerOffset . . . . .	 00000014	 DWord
+  operandPointerSelector . . . .	 00000018	 Word
+INPUT_RECORD . . . . . . . . . .	 00000014
+  EventType  . . . . . . . . . .	 00000000	 Word
+  Event  . . . . . . . . . . . .	 00000004	 XmmWord
+  bKeyDown . . . . . . . . . . .	 00000000	 DWord
+  wRepeatCount . . . . . . . . .	 00000004	 Word
+  wVirtualKeyCode  . . . . . . .	 00000006	 Word
+  wVirtualScanCode . . . . . . .	 00000008	 Word
+  uChar  . . . . . . . . . . . .	 0000000A	 Word
+  UnicodeChar  . . . . . . . . .	 00000000	 Word
+  AsciiChar  . . . . . . . . . .	 00000000	 Byte
+  dwControlKeyState  . . . . . .	 0000000C	 DWord
+  dwMousePosition  . . . . . . .	 00000000	 DWord
+  dwButtonState  . . . . . . . .	 00000004	 DWord
+  dwMouseControlKeyState . . . .	 00000008	 DWord
+  dwEventFlags . . . . . . . . .	 0000000C	 DWord
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCommandId  . . . . . . . . .	 00000000	 DWord
+  bSetFocus  . . . . . . . . . .	 00000000	 DWord
+KEY_EVENT_RECORD . . . . . . . .	 00000010
+  bKeyDown . . . . . . . . . . .	 00000000	 DWord
+  wRepeatCount . . . . . . . . .	 00000004	 Word
+  wVirtualKeyCode  . . . . . . .	 00000006	 Word
+  wVirtualScanCode . . . . . . .	 00000008	 Word
+  uChar  . . . . . . . . . . . .	 0000000A	 Word
+  UnicodeChar  . . . . . . . . .	 00000000	 Word
+  AsciiChar  . . . . . . . . . .	 00000000	 Byte
+  dwControlKeyState  . . . . . .	 0000000C	 DWord
+MENU_EVENT_RECORD  . . . . . . .	 00000004
+  dwCommandId  . . . . . . . . .	 00000000	 DWord
+MOUSE_EVENT_RECORD . . . . . . .	 00000010
+  dwMousePosition  . . . . . . .	 00000000	 DWord
+  dwButtonState  . . . . . . . .	 00000004	 DWord
+  dwMouseControlKeyState . . . .	 00000008	 DWord
+  dwEventFlags . . . . . . . . .	 0000000C	 DWord
+SMALL_RECT . . . . . . . . . . .	 00000008
+  Left . . . . . . . . . . . . .	 00000000	 Word
+  Top  . . . . . . . . . . . . .	 00000002	 Word
+  Right  . . . . . . . . . . . .	 00000004	 Word
+  Bottom . . . . . . . . . . . .	 00000006	 Word
+SYSTEMTIME . . . . . . . . . . .	 00000010
+  wYear  . . . . . . . . . . . .	 00000000	 Word
+  wMonth . . . . . . . . . . . .	 00000002	 Word
+  wDayOfWeek . . . . . . . . . .	 00000004	 Word
+  wDay . . . . . . . . . . . . .	 00000006	 Word
+  wHour  . . . . . . . . . . . .	 00000008	 Word
+  wMinute  . . . . . . . . . . .	 0000000A	 Word
+  wSecond  . . . . . . . . . . .	 0000000C	 Word
+  wMilliseconds  . . . . . . . .	 0000000E	 Word
+WINDOW_BUFFER_SIZE_RECORD  . . .	 00000004
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000158 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000005EA Para	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+CloseFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CloseHandle  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Clrscr . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateFileA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateOutputFile . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Crlf . . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Delay  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpMem  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpRegs . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FileTimeToDosDateTime  . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FileTimeToSystemTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FlushConsoleInputBuffer  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FormatMessageA . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandLineA  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandTail . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCP . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleScreenBufferInfo . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetDateTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetFileTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetKeyState  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLastError . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMaxXY . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMseconds  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetNumberOfConsoleInputEvents  .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetProcessHeap . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetStdHandle . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetSystemTime  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTickCount . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Gotoxy . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HTCreate . . . . . . . . . . . .	P Near	 00000208 _TEXT	Length= 00000045 Public STDCALL
+  hashSize . . . . . . . . . . .	Byte	 bp + 00000008
+  hashName . . . . . . . . . . .	DWord	 bp + 0000000C
+HTDestroy  . . . . . . . . . . .	P Near	 000005DB _TEXT	Length= 0000000F Public STDCALL
+  htptr  . . . . . . . . . . . .	DWord	 bp + 00000008
+  hthheap  . . . . . . . . . . .	DWord	 bp + 0000000C
+HTInsert . . . . . . . . . . . .	P Near	 0000024D _TEXT	Length= 000000E2 Public STDCALL
+  htptr  . . . . . . . . . . . .	DWord	 bp + 00000008
+  htkey  . . . . . . . . . . . .	DWord	 bp + 0000000C
+  htvalue  . . . . . . . . . . .	DWord	 bp + 00000010
+  noExist  . . . . . . . . . . .	L Near	 0000028C _TEXT	
+  L1 . . . . . . . . . . . . . .	L Near	 000002BF _TEXT	
+  proceed  . . . . . . . . . . .	L Near	 000002E4 _TEXT	
+  notFree  . . . . . . . . . . .	L Near	 0000031E _TEXT	
+  endInsert  . . . . . . . . . .	L Near	 00000327 _TEXT	
+HTPrint  . . . . . . . . . . . .	P Near	 00000503 _TEXT	Length= 000000D8 Public STDCALL
+  htptr  . . . . . . . . . . . .	DWord	 bp + 00000008
+  incTime  . . . . . . . . . . .	L Near	 00000564 _TEXT	
+  NotEmpty . . . . . . . . . . .	L Near	 00000586 _TEXT	
+  printingLink . . . . . . . . .	L Near	 00000595 _TEXT	
+  endOfLoop  . . . . . . . . . .	L Near	 000005C8 _TEXT	
+HTRemove . . . . . . . . . . . .	P Near	 0000032F _TEXT	Length= 000000F6 Public STDCALL
+  htptr  . . . . . . . . . . . .	DWord	 bp + 00000008
+  htkey  . . . . . . . . . . . .	DWord	 bp + 0000000C
+  L1 . . . . . . . . . . . . . .	L Near	 00000361 _TEXT	
+  deleteAtHead . . . . . . . . .	L Near	 0000039A _TEXT	
+  noDeleteAtHead . . . . . . . .	L Near	 000003C2 _TEXT	
+  repeatSearch . . . . . . . . .	L Near	 000003C2 _TEXT	
+  notEqual . . . . . . . . . . .	L Near	 0000040A _TEXT	
+  notFound . . . . . . . . . . .	L Near	 0000040E _TEXT	
+  done . . . . . . . . . . . . .	L Near	 0000041D _TEXT	
+HTSearch . . . . . . . . . . . .	P Near	 00000425 _TEXT	Length= 000000DE Public STDCALL
+  htptr  . . . . . . . . . . . .	DWord	 bp + 00000008
+  htkey  . . . . . . . . . . . .	DWord	 bp + 0000000C
+  L1 . . . . . . . . . . . . . .	L Near	 00000447 _TEXT	
+  repeatSearch . . . . . . . . .	L Near	 00000473 _TEXT	
+  continueSearch . . . . . . . .	L Near	 0000048F _TEXT	
+  notFound . . . . . . . . . . .	L Near	 0000049D _TEXT	
+  endSearch  . . . . . . . . . .	L Near	 000004B8 _TEXT	
+HeapAlloc  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapCreate . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MsgBoxAsk  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ParseDecimal32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ParseInteger32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Randomize  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadChar . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleA . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadDec  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFile . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFloat  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFromFile . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadHex  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleScreenBufferSize . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTextAttribute  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTitleA . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleWindowInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetFilePointer . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ShowFPUStack . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Sleep  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+StrLength  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_compare  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_copy . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_length . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_trim . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_ucase  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SystemTimeToFileTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WaitMsg  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBinB  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBin . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteChar  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleA  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputAttribute  . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputCharacterA . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteDec . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFloat . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHexB  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHex . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteInt . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000208 Public STDCALL
+  restart  . . . . . . . . . . .	L Near	 00000000 _TEXT	
+  avengersAssemble . . . . . . .	L Near	 00000000 _TEXT	
+printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000003h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+ALT_MASK . . . . . . . . . . . .	Number	 00000003h   
+CAPSLOCK_ON  . . . . . . . . . .	Number	 00000080h   
+CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
+CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
+CTRL_MASK  . . . . . . . . . . .	Number	 0000000Ch   
+CreateFile . . . . . . . . . . .	Text   	 CreateFileA
+DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
+ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
+ENABLE_LINE_INPUT  . . . . . . .	Number	 00000002h   
+ENABLE_MOUSE_INPUT . . . . . . .	Number	 00000010h   
+ENABLE_PROCESSED_INPUT . . . . .	Number	 00000001h   
+ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h   
+ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
+ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
+ENHANCED_KEY . . . . . . . . . .	Number	 00000100h   
+FALSE  . . . . . . . . . . . . .	Number	 00000000h   
+FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
+FILE_ATTRIBUTE_COMPRESSED  . . .	Number	 00000800h   
+FILE_ATTRIBUTE_DEVICE  . . . . .	Number	 00000040h   
+FILE_ATTRIBUTE_DIRECTORY . . . .	Number	 00000010h   
+FILE_ATTRIBUTE_ENCRYPTED . . . .	Number	 00004000h   
+FILE_ATTRIBUTE_HIDDEN  . . . . .	Number	 00000002h   
+FILE_ATTRIBUTE_NORMAL  . . . . .	Number	 00000080h   
+FILE_ATTRIBUTE_NOT_CONTENT_INDEXED .	Number	 00002000h   
+FILE_ATTRIBUTE_OFFLINE . . . . .	Number	 00001000h   
+FILE_ATTRIBUTE_READONLY  . . . .	Number	 00000001h   
+FILE_ATTRIBUTE_REPARSE_POINT . .	Number	 00000400h   
+FILE_ATTRIBUTE_SPARSE_FILE . . .	Number	 00000200h   
+FILE_ATTRIBUTE_SYSTEM  . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_TEMPORARY . . . .	Number	 00000100h   
+FILE_BEGIN . . . . . . . . . . .	Number	 00000000h   
+FILE_CURRENT . . . . . . . . . .	Number	 00000001h   
+FILE_DELETE_CHILD  . . . . . . .	Number	 00000040h   
+FILE_END . . . . . . . . . . . .	Number	 00000002h   
+FILE_READ_DATA . . . . . . . . .	Number	 00000001h   
+FILE_SHARE_DELETE  . . . . . . .	Number	 00000004h   
+FILE_SHARE_READ  . . . . . . . .	Number	 00000001h   
+FILE_SHARE_WRITE . . . . . . . .	Number	 00000002h   
+FILE_WRITE_DATA  . . . . . . . .	Number	 00000002h   
+FOCUS_EVENT  . . . . . . . . . .	Number	 00000010h   
+FORMAT_MESSAGE_ALLOCATE_BUFFER .	Number	 00000100h   
+FORMAT_MESSAGE_FROM_SYSTEM . . .	Number	 00001000h   
+FormatMessage  . . . . . . . . .	Text   	 FormatMessageA
+GENERIC_ALL  . . . . . . . . . .	Number	 10000000h   
+GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h   
+GENERIC_READ . . . . . . . . . .	Number	 -80000000h   
+GENERIC_WRITE  . . . . . . . . .	Number	 40000000h   
+GetCommandLine . . . . . . . . .	Text   	 GetCommandLineA
+HANDLE . . . . . . . . . . . . .	Text   	 DWORD
+HEAP_GENERATE_EXCEPTIONS . . . .	Number	 00000004h   
+HEAP_GROWABLE  . . . . . . . . .	Number	 00000002h   
+HEAP_NO_SERIALIZE  . . . . . . .	Number	 00000001h   
+HEAP_REALLOC_IN_PLACE_ONLY . . .	Number	 00000010h   
+HEAP_ZERO_MEMORY . . . . . . . .	Number	 00000008h   
+IDABORT  . . . . . . . . . . . .	Number	 00000003h   
+IDCANCEL . . . . . . . . . . . .	Number	 00000002h   
+IDCLOSE  . . . . . . . . . . . .	Number	 00000008h   
+IDCONTINUE . . . . . . . . . . .	Number	 0000000Bh   
+IDHELP . . . . . . . . . . . . .	Number	 00000009h   
+IDIGNORE . . . . . . . . . . . .	Number	 00000005h   
+IDNO . . . . . . . . . . . . . .	Number	 00000007h   
+IDOK . . . . . . . . . . . . . .	Number	 00000001h   
+IDRETRY  . . . . . . . . . . . .	Number	 00000004h   
+IDTIMEOUT  . . . . . . . . . . .	Number	 00007D00h   
+IDTRYAGAIN . . . . . . . . . . .	Number	 0000000Ah   
+IDYES  . . . . . . . . . . . . .	Number	 00000006h   
+INVALID_HANDLE_VALUE . . . . . .	Number	 -00000001h   
+KBDOWN_FLAG  . . . . . . . . . .	Number	 00000001h   
+KEY_EVENT  . . . . . . . . . . .	Number	 00000001h   
+KEY_MASKS  . . . . . . . . . . .	Number	 0000001Fh   
+LEFT_ALT_PRESSED . . . . . . . .	Number	 00000002h   
+LEFT_CTRL_PRESSED  . . . . . . .	Number	 00000008h   
+MB_ABORTRETRYIGNORE  . . . . . .	Number	 00000002h   
+MB_APPLMODAL . . . . . . . . . .	Number	 00000000h   
+MB_CANCELTRYCONTINUE . . . . . .	Number	 00000006h   
+MB_DEFBUTTON1  . . . . . . . . .	Number	 00000000h   
+MB_DEFBUTTON2  . . . . . . . . .	Number	 00000100h   
+MB_DEFBUTTON3  . . . . . . . . .	Number	 00000200h   
+MB_DEFBUTTON4  . . . . . . . . .	Number	 00000300h   
+MB_HELP  . . . . . . . . . . . .	Number	 00004000h   
+MB_ICONASTERISK  . . . . . . . .	Number	 00000040h   
+MB_ICONERROR . . . . . . . . . .	Number	 00000010h   
+MB_ICONEXCLAMATION . . . . . . .	Number	 00000030h   
+MB_ICONHAND  . . . . . . . . . .	Number	 00000010h   
+MB_ICONINFORMATION . . . . . . .	Number	 00000040h   
+MB_ICONQUESTION  . . . . . . . .	Number	 00000020h   
+MB_ICONSTOP  . . . . . . . . . .	Number	 00000010h   
+MB_ICONWARNING . . . . . . . . .	Number	 00000030h   
+MB_OKCANCEL  . . . . . . . . . .	Number	 00000001h   
+MB_OK  . . . . . . . . . . . . .	Number	 00000000h   
+MB_RETRYCANCEL . . . . . . . . .	Number	 00000005h   
+MB_SYSTEMMODAL . . . . . . . . .	Number	 00001000h   
+MB_TASKMODAL . . . . . . . . . .	Number	 00002000h   
+MB_USERICON  . . . . . . . . . .	Number	 00000080h   
+MB_YESNOCANCEL . . . . . . . . .	Number	 00000003h   
+MB_YESNO . . . . . . . . . . . .	Number	 00000004h   
+MENU_EVENT . . . . . . . . . . .	Number	 00000008h   
+MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
+MessageBox . . . . . . . . . . .	Text   	 MessageBoxA
+NULL . . . . . . . . . . . . . .	Number	 00000000h   
+NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h   
+OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
+OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
+RIGHT_ALT_PRESSED  . . . . . . .	Number	 00000001h   
+RIGHT_CTRL_PRESSED . . . . . . .	Number	 00000004h   
+ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
+ReadConsole  . . . . . . . . . .	Text   	 ReadConsoleA
+SCROLLLOCK_ON  . . . . . . . . .	Number	 00000040h   
+SHIFT_MASK . . . . . . . . . . .	Number	 00000010h   
+SHIFT_PRESSED  . . . . . . . . .	Number	 00000010h   
+STD_ERROR_HANDLE . . . . . . . .	Number	 -0000000Ch   
+STD_INPUT_HANDLE . . . . . . . .	Number	 -0000000Ah   
+STD_OUTPUT_HANDLE  . . . . . . .	Number	 -0000000Bh   
+SetConsoleTitle  . . . . . . . .	Text   	 SetConsoleTitleA
+TAB  . . . . . . . . . . . . . .	Number	 00000009h   
+TRUE . . . . . . . . . . . . . .	Number	 00000001h   
+TRUNCATE_EXISTING  . . . . . . .	Number	 00000005h   
+VK_11  . . . . . . . . . . . . .	Number	 000000BDh   
+VK_12  . . . . . . . . . . . . .	Number	 000000BBh   
+VK_ADD . . . . . . . . . . . . .	Number	 0000006Bh   
+VK_BACK  . . . . . . . . . . . .	Number	 00000008h   
+VK_CANCEL  . . . . . . . . . . .	Number	 00000003h   
+VK_CAPITAL . . . . . . . . . . .	Number	 00000014h   
+VK_CLEAR . . . . . . . . . . . .	Number	 0000000Ch   
+VK_CONTROL . . . . . . . . . . .	Number	 00000011h   
+VK_DECIMAL . . . . . . . . . . .	Number	 0000006Eh   
+VK_DELETE  . . . . . . . . . . .	Number	 0000002Eh   
+VK_DIVIDE  . . . . . . . . . . .	Number	 0000006Fh   
+VK_DOWN  . . . . . . . . . . . .	Number	 00000028h   
+VK_END . . . . . . . . . . . . .	Number	 00000023h   
+VK_ESCAPE  . . . . . . . . . . .	Number	 0000001Bh   
+VK_EXECUTE . . . . . . . . . . .	Number	 0000002Bh   
+VK_F10 . . . . . . . . . . . . .	Number	 00000079h   
+VK_F11 . . . . . . . . . . . . .	Number	 0000007Ah   
+VK_F12 . . . . . . . . . . . . .	Number	 0000007Bh   
+VK_F13 . . . . . . . . . . . . .	Number	 0000007Ch   
+VK_F14 . . . . . . . . . . . . .	Number	 0000007Dh   
+VK_F15 . . . . . . . . . . . . .	Number	 0000007Eh   
+VK_F16 . . . . . . . . . . . . .	Number	 0000007Fh   
+VK_F17 . . . . . . . . . . . . .	Number	 00000080h   
+VK_F18 . . . . . . . . . . . . .	Number	 00000081h   
+VK_F19 . . . . . . . . . . . . .	Number	 00000082h   
+VK_F1  . . . . . . . . . . . . .	Number	 00000070h   
+VK_F20 . . . . . . . . . . . . .	Number	 00000083h   
+VK_F21 . . . . . . . . . . . . .	Number	 00000084h   
+VK_F22 . . . . . . . . . . . . .	Number	 00000085h   
+VK_F23 . . . . . . . . . . . . .	Number	 00000086h   
+VK_F24 . . . . . . . . . . . . .	Number	 00000087h   
+VK_F2  . . . . . . . . . . . . .	Number	 00000071h   
+VK_F3  . . . . . . . . . . . . .	Number	 00000072h   
+VK_F4  . . . . . . . . . . . . .	Number	 00000073h   
+VK_F5  . . . . . . . . . . . . .	Number	 00000074h   
+VK_F6  . . . . . . . . . . . . .	Number	 00000075h   
+VK_F7  . . . . . . . . . . . . .	Number	 00000076h   
+VK_F8  . . . . . . . . . . . . .	Number	 00000077h   
+VK_F9  . . . . . . . . . . . . .	Number	 00000078h   
+VK_HELP  . . . . . . . . . . . .	Number	 0000002Fh   
+VK_HOME  . . . . . . . . . . . .	Number	 00000024h   
+VK_INSERT  . . . . . . . . . . .	Number	 0000002Dh   
+VK_LBUTTON . . . . . . . . . . .	Number	 00000001h   
+VK_LCONTROL  . . . . . . . . . .	Number	 000000A2h   
+VK_LEFT  . . . . . . . . . . . .	Number	 00000025h   
+VK_LMENU . . . . . . . . . . . .	Number	 000000A4h   
+VK_LSHIFT  . . . . . . . . . . .	Number	 000000A0h   
+VK_MENU  . . . . . . . . . . . .	Number	 00000012h   
+VK_MULTIPLY  . . . . . . . . . .	Number	 0000006Ah   
+VK_NEXT  . . . . . . . . . . . .	Number	 00000022h   
+VK_NUMLOCK . . . . . . . . . . .	Number	 00000090h   
+VK_NUMPAD0 . . . . . . . . . . .	Number	 00000060h   
+VK_NUMPAD1 . . . . . . . . . . .	Number	 00000061h   
+VK_NUMPAD2 . . . . . . . . . . .	Number	 00000062h   
+VK_NUMPAD3 . . . . . . . . . . .	Number	 00000063h   
+VK_NUMPAD4 . . . . . . . . . . .	Number	 00000064h   
+VK_NUMPAD5 . . . . . . . . . . .	Number	 00000065h   
+VK_NUMPAD6 . . . . . . . . . . .	Number	 00000066h   
+VK_NUMPAD7 . . . . . . . . . . .	Number	 00000067h   
+VK_NUMPAD8 . . . . . . . . . . .	Number	 00000068h   
+VK_NUMPAD9 . . . . . . . . . . .	Number	 00000069h   
+VK_PAUSE . . . . . . . . . . . .	Number	 00000013h   
+VK_PRINT . . . . . . . . . . . .	Number	 0000002Ah   
+VK_PRIOR . . . . . . . . . . . .	Number	 00000021h   
+VK_RBUTTON . . . . . . . . . . .	Number	 00000002h   
+VK_RCONTROL  . . . . . . . . . .	Number	 000000A3h   
+VK_RETURN  . . . . . . . . . . .	Number	 0000000Dh   
+VK_RIGHT . . . . . . . . . . . .	Number	 00000027h   
+VK_RMENU . . . . . . . . . . . .	Number	 000000A5h   
+VK_RSHIFT  . . . . . . . . . . .	Number	 000000A1h   
+VK_SCROLL  . . . . . . . . . . .	Number	 00000091h   
+VK_SEPARATER . . . . . . . . . .	Number	 0000006Ch   
+VK_SHIFT . . . . . . . . . . . .	Number	 00000010h   
+VK_SNAPSHOT  . . . . . . . . . .	Number	 0000002Ch   
+VK_SPACE . . . . . . . . . . . .	Number	 00000020h   
+VK_SUBTRACT  . . . . . . . . . .	Number	 0000006Dh   
+VK_TAB . . . . . . . . . . . . .	Number	 00000009h   
+VK_UP  . . . . . . . . . . . . .	Number	 00000026h   
+WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
+WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
+WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+avengersHHeap  . . . . . . . . .	DWord	 000000CE _DATA	
+avengersHashPTR  . . . . . . . .	DWord	 000000CA _DATA	
+avengersTableSize  . . . . . . .	Byte	 000000D2 _DATA	
+badGuysHHeap . . . . . . . . . .	DWord	 000000E0 _DATA	
+badGuysHashPTR . . . . . . . . .	DWord	 000000DC _DATA	
+badGuysTableSize . . . . . . . .	Byte	 000000E4 _DATA	
+black  . . . . . . . . . . . . .	Number	 00000000h   
+blue . . . . . . . . . . . . . .	Number	 00000001h   
+brown  . . . . . . . . . . . . .	Number	 00000006h   
+cyan . . . . . . . . . . . . . .	Number	 00000003h   
+exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+gray . . . . . . . . . . . . . .	Number	 00000008h   
+green  . . . . . . . . . . . . .	Number	 00000002h   
+hHeap  . . . . . . . . . . . . .	DWord	 00000000 _DATA	
+hashPTR  . . . . . . . . . . . .	DWord	 00000004 _DATA	
+lightBlue  . . . . . . . . . . .	Number	 00000009h   
+lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
+lightGray  . . . . . . . . . . .	Number	 00000007h   
+lightGreen . . . . . . . . . . .	Number	 0000000Ah   
+lightMagenta . . . . . . . . . .	Number	 0000000Dh   
+lightRed . . . . . . . . . . . .	Number	 0000000Ch   
+magenta  . . . . . . . . . . . .	Number	 00000005h   
+msgArrow . . . . . . . . . . . .	Byte	 00000097 _DATA	
+msgAvengers  . . . . . . . . . .	Byte	 000000D3 _DATA	
+msgBadGuys . . . . . . . . . . .	Byte	 000000E5 _DATA	
+msgBettany . . . . . . . . . . .	Byte	 00000125 _DATA	
+msgColon . . . . . . . . . . . .	Byte	 00000065 _DATA	
+msgDowney  . . . . . . . . . . .	Byte	 00000105 _DATA	
+msgElementsInTable . . . . . . .	Byte	 00000083 _DATA	
+msgFury  . . . . . . . . . . . .	Byte	 0000012D _DATA	
+msgHemsworth . . . . . . . . . .	Byte	 000000F3 _DATA	
+msgHiddleston  . . . . . . . . .	Byte	 0000013F _DATA	
+msgHulk  . . . . . . . . . . . .	Byte	 0000010C _DATA	
+msgInsertingKey  . . . . . . . .	Byte	 0000003C _DATA	
+msgIronman . . . . . . . . . . .	Byte	 000000FD _DATA	
+msgJackson . . . . . . . . . . .	Byte	 00000132 _DATA	
+msgJarvis  . . . . . . . . . . .	Byte	 0000011E _DATA	
+msgKeyExists . . . . . . . . . .	Byte	 0000009D _DATA	
+msgKeyFound  . . . . . . . . . .	Byte	 00000031 _DATA	
+msgKeyNotFound . . . . . . . . .	Byte	 00000021 _DATA	
+msgKeyUpdated  . . . . . . . . .	Byte	 000000B6 _DATA	
+msgKey . . . . . . . . . . . . .	Byte	 000000C4 _DATA	
+msgLoki  . . . . . . . . . . . .	Byte	 0000013A _DATA	
+msgNotFound  . . . . . . . . . .	Byte	 000000AA _DATA	
+msgNothing . . . . . . . . . . .	Byte	 00000055 _DATA	
+msgOdin  . . . . . . . . . . . .	Byte	 00000119 _DATA	
+msgRuffalo . . . . . . . . . . .	Byte	 00000111 _DATA	
+msgSpader  . . . . . . . . . . .	Byte	 00000151 _DATA	
+msgTableName . . . . . . . . . .	Byte	 00000069 _DATA	
+msgTableSize . . . . . . . . . .	Byte	 00000076 _DATA	
+msgThor  . . . . . . . . . . . .	Byte	 000000EE _DATA	
+msgUltron  . . . . . . . . . . .	Byte	 0000014A _DATA	
+msgValue . . . . . . . . . . . .	Byte	 0000004D _DATA	
+msgasksize . . . . . . . . . . .	Byte	 00000014 _DATA	
+msgcreate  . . . . . . . . . . .	Byte	 00000008 _DATA	
+red  . . . . . . . . . . . . . .	Number	 00000004h   
+white  . . . . . . . . . . . . .	Number	 0000000Fh   
+wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
+yellow . . . . . . . . . . . . .	Number	 0000000Eh   
+
+	   2 Warnings
+	   0 Errors
